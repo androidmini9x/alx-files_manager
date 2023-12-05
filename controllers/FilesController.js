@@ -16,17 +16,20 @@ class FilesController {
     }
 
     const userID = await redisClient.get(`auth_${sessionID}`);
+    if (!userID) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
     const user = await dbClient.db.collection('users').findOne({
       _id: ObjectId(userID),
     });
-
     if (!user) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
     const { name, type, data } = req.body;
-    const parentId = req.body.parentId ? req.body.parentId : '0';
-    const isPublic = req.body.isPublic ? req.body.isPublic : false;
+    const parentId = req.body.parentId === '0' ? req.body.parentId : 0;
+    const isPublic = req.body.isPublic || false;
 
     if (!name) { return res.status(400).send({ error: 'Missing name' }); }
     if (!type || !['folder', 'file', 'image'].includes(type)) { return res.status(400).send({ error: 'Missing type' }); }
