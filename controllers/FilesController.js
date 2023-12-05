@@ -25,7 +25,7 @@ class FilesController {
     }
 
     const { name, type, data } = req.body;
-    const parentId = req.body.parentId ? req.body.parentId : 0;
+    const parentId = req.body.parentId ? req.body.parentId : '0';
     const isPublic = req.body.isPublic ? req.body.isPublic : false;
 
     if (!name) { return res.status(400).send({ error: 'Missing name' }); }
