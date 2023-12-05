@@ -12,7 +12,7 @@ class AuthController {
     }
     const [protocol, token] = auth.split(' ');
 
-    if (protocol != 'Basic' || !token) {
+    if (protocol !== 'Basic' || !token) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
@@ -25,8 +25,8 @@ class AuthController {
 
     const user = await dbClient.db.collection('users').findOne({
       email,
-      password: sha1(password)
-    })
+      password: sha1(password),
+    });
 
     if (!user) {
       return res.status(401).send({ error: 'Unauthorized' });
@@ -35,18 +35,23 @@ class AuthController {
     const sessionID = uuidv4();
     redisClient.set(`auth_${sessionID}`, user._id.toString(), 24 * 60 * 60);
 
-    return res.status(200).send({ 'token': sessionID });
+    return res.status(200).send({ token: sessionID });
   }
-  static getDisconnect(req, res) {
+
+  static async getDisconnect(req, res) {
     const sessionID = req.header('X-Token');
 
     if (!sessionID) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
+    const userID = await redisClient.get(`auth_${sessionID}`);
 
-    redisClient.del(`auth_${sessionID}`);
+    if (userID) {
+      redisClient.del(`auth_${sessionID}`);
+      return res.status(204).send();
+    }
 
-    return res.status(204).send();
+    return res.status(401).send({ error: 'Unauthorized' });
   }
 }
 
