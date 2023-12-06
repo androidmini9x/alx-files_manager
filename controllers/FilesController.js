@@ -146,7 +146,7 @@ class FilesController {
     if (parentId) {
       filter = [{ $match: { parentId } }, ...filter];
     } else {
-      filter = [{ $match: { userId: user._id } }, ...filter];
+      filter = [{ $match: { userId: userID } }, ...filter];
     }
     const aggCursor = await dbClient.db.collection('files').aggregate(filter).toArray();
     fileList = aggCursor.map((dd) => ({
