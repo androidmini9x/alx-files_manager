@@ -49,10 +49,11 @@ class FilesController {
       name,
       type,
       isPublic,
-      parentId,
+      parentId: 0,
     };
 
     if (type === 'folder') {
+      if (parentId) abstractFile.parentId = ObjectId(parentId);
       const fd = dbClient.db.collection('files').insertOne({ ...abstractFile });
       return res.status(201).send({ id: fd.insertedId, ...abstractFile });
     }
@@ -69,7 +70,7 @@ class FilesController {
       }
       return true;
     });
-
+    if (parentId) abstractFile.parentId = ObjectId(parentId);
     abstractFile.localPath = `${FOLDER_PATH}/${fileuuid}`;
     const fl = await dbClient.db.collection('files').insertOne({ ...abstractFile });
     return res.status(201).send({ id: fl.insertedId, ...abstractFile });
