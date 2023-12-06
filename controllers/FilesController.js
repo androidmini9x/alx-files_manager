@@ -80,6 +80,102 @@ class FilesController {
     abstractFile.parentId = abstractFile.parentId === '0' ? 0 : abstractFile.parentId;
     return res.status(201).send({ id: fl.insertedId, ...abstractFile });
   }
+
+  static async getShow(req, res) {
+    // Extract & Check the token is valid
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const userID = await redisClient.get(`auth_${token}`);
+    if (!userID) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    // Get the user from database
+    const user = await dbClient.db.collection('users').findOne({
+      _id: ObjectId(userID),
+    });
+    if (!user) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const fileID = req.params.id;
+    const fileExists = await dbClient.db.collection('files').findOne({
+      userId: user._id,
+      _id: ObjectId(fileID),
+    });
+
+    if (!fileExists) return res.status(404).send({ error: 'Not found' });
+    fileExists.id = fileExists._id;
+    delete fileExists.localPath;
+    delete fileExists._id;
+    return res.status(200).send({ ...fileExists });
+  }
+
+  static async getIndex(req, res) {
+    // Extract & Check the token is valid
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const userID = await redisClient.get(`auth_${token}`);
+    if (!userID) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    // Get the user from database
+    const user = await dbClient.db.collection('users').findOne({
+      _id: ObjectId(userID),
+    });
+    if (!user) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const parentId = req.query.parentId || 0;
+    let page = Number(req.query.page) || 0;
+
+    if (Number.isNaN(page)) page = 0;
+
+    // if the parentId is not linked to any user folder
+    // returns an empty list
+    if (parentId !== 0) {
+      const folder = await dbClient.db.collection('files').findOne({
+        _id: ObjectId(parentId),
+      });
+      if (!folder || folder.type !== 'folder') {
+        return res.status(200).send([]);
+      }
+    }
+
+    let filter = [
+      { $match: { parentId } },
+      { $skip: page * 20 },
+      { $limit: 20 },
+    ];
+
+    let fileList = [];
+
+    if (parentId) {
+      filter = [{ $match: { parentId } }, ...filter];
+    } else {
+      filter = [{ $match: { userId: user._id } }, ...filter];
+    }
+    const aggCursor = await dbClient.db.collection('files').aggregate(filter).toArray();
+    fileList = aggCursor.map((dd) => ({
+      id: dd._id,
+      userId: dd.userId,
+      name: dd.name,
+      type: dd.type,
+      isPublic: dd.isPublic,
+      parentId: dd.parentId,
+    }));
+    return res.status(200).send(fileList);
+  }
 }
 
 export default FilesController;
