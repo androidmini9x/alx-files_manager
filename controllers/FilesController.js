@@ -45,7 +45,7 @@ class FilesController {
     }
 
     const abstractFile = {
-      userId: userID,
+      userId: user._id,
       name,
       type,
       isPublic,
