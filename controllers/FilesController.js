@@ -94,17 +94,9 @@ class FilesController {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    // Get the user from database
-    const user = await dbClient.db.collection('users').findOne({
-      _id: ObjectId(userID),
-    });
-    if (!user) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
-
     const fileID = req.params.id;
     const fileExists = await dbClient.db.collection('files').findOne({
-      userId: user._id,
+      userId: ObjectId(userID),
       _id: ObjectId(fileID),
     });
 
@@ -128,14 +120,6 @@ class FilesController {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    // Get the user from database
-    const user = await dbClient.db.collection('users').findOne({
-      _id: ObjectId(userID),
-    });
-    if (!user) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
-
     const parentId = req.query.parentId || 0;
     let page = Number(req.query.page) || 0;
 
@@ -143,7 +127,7 @@ class FilesController {
 
     // if the parentId is not linked to any user folder
     // returns an empty list
-    if (parentId !== 0) {
+    if (parentId !== 0 && parentId !== '0') {
       const folder = await dbClient.db.collection('files').findOne({
         _id: ObjectId(parentId),
       });
@@ -153,7 +137,6 @@ class FilesController {
     }
 
     let filter = [
-      { $match: { parentId } },
       { $skip: page * 20 },
       { $limit: 20 },
     ];
