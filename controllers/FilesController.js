@@ -9,37 +9,40 @@ const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
 class FilesController {
   static async postUpload(req, res) {
-    const sessionID = req.header('X-Token');
+    // Extract & Check the token is valid
+    const token = req.header('X-Token');
 
-    if (!sessionID) {
+    if (!token) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
-    const userID = await redisClient.get(`auth_${sessionID}`);
+    const userID = await redisClient.get(`auth_${token}`);
     if (!userID) {
       return res.status(401).send({ error: 'Unauthorized' });
     }
 
+    // Get the user from database
     const user = await dbClient.db.collection('users').findOne({
       _id: ObjectId(userID),
     });
-    if (!user) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
 
+    const allowedFileType = ['folder', 'file', 'image']
+    // Extract data from request
     const {
       name, type, data, parentId,
     } = req.body;
     const isPublic = req.body.isPublic || false;
 
     if (!name) { return res.status(400).send({ error: 'Missing name' }); }
-    if (!type || !['folder', 'file', 'image'].includes(type)) { return res.status(400).send({ error: 'Missing type' }); }
+    if (!type || !allowedFileType.includes(type)) { return res.status(400).send({ error: 'Missing type' }); }
     if (!data && type !== 'folder') { return res.status(400).send({ error: 'Missing data' }); }
 
+    // Create root folder if it not exists
     if (!fs.existsSync(FOLDER_PATH)) {
       fs.mkdirSync(FOLDER_PATH, { recursive: true });
     }
 
+    // Handle parent value if it used
     if (parentId) {
       const parent = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
       if (!parent) {
@@ -60,7 +63,7 @@ class FilesController {
 
     if (type === 'folder') {
       if (parentId) abstractFile.parentId = ObjectId(parentId);
-      const fd = dbClient.db.collection('files').insertOne({ ...abstractFile });
+      const fd = await dbClient.db.collection('files').insertOne({ ...abstractFile });
       return res.status(201).send({ id: fd.insertedId, ...abstractFile });
     }
 
