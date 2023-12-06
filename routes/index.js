@@ -18,5 +18,6 @@ routes.get('/files/:id', (req, res) => FilesController.getShow(req, res));
 routes.get('/files', (req, res) => FilesController.getIndex(req, res));
 routes.put('/files/:id/publish', (req, res) => FilesController.putPublish(req, res));
 routes.put('/files/:id/unpublish', (req, res) => FilesController.putUnpublish(req, res));
+routes.get('/files/:id/data', (req, res) => FilesController.getFile(req, res));
 
 module.exports = routes;
