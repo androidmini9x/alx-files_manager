@@ -28,13 +28,13 @@ class FilesController {
     }
 
     const { name, type, data } = req.body;
-    const parentId = req.body.parentId === '0' ? 0 : req.body.parentId;
+    const parentId = req.body.parentId;
     const isPublic = req.body.isPublic || false;
 
     if (!name) { return res.status(400).send({ error: 'Missing name' }); }
     if (!type || !['folder', 'file', 'image'].includes(type)) { return res.status(400).send({ error: 'Missing type' }); }
     if (!data && type !== 'folder') { return res.status(400).send({ error: 'Missing data' }); }
-    if (parentId) {
+    if (parentId && parentId !== '0') {
       const parent = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
       if (!parent) {
         return res.status(400).send({ error: 'Parent not found' });
