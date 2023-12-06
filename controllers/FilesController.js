@@ -108,56 +108,48 @@ class FilesController {
   }
 
   static async getIndex(req, res) {
-    // Extract & Check the token is valid
-    const token = req.header('X-Token');
+    // check for x-token header
+    const token = req.headers['x-token'];
+    if (!token) return res.status(401).json({ error: 'Unauthorized' });
 
-    if (!token) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
+    // verify token
+    const key = `auth_${token}`;
+    const userId = await redisClient.get(key);
+    if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-    const userID = await redisClient.get(`auth_${token}`);
-    if (!userID) {
-      return res.status(401).send({ error: 'Unauthorized' });
-    }
-
-    const parentId = req.query.parentId || 0;
+    let parentId = req.query.parentId || '0';
+    if (parentId === '0') parentId = 0;
     let page = Number(req.query.page) || 0;
 
     if (Number.isNaN(page)) page = 0;
 
-    // if the parentId is not linked to any user folder
-    // returns an empty list
     if (parentId !== 0 && parentId !== '0') {
+      parentId = ObjectId(parentId);
       const folder = await dbClient.db.collection('files').findOne({
-        _id: ObjectId(parentId),
+        _id: parentId,
       });
-      if (!folder || folder.type !== 'folder') {
-        return res.status(200).send([]);
-      }
+
+      if (!folder || folder.type !== 'folder') return res.status(200).send([]);
     }
 
-    let filter = [
+    let pipeline = [
+      { $match: { parentId } },
       { $skip: page * 20 },
       { $limit: 20 },
     ];
-
-    let fileList = [];
-
-    if (parentId) {
-      filter = [{ $match: { parentId } }, ...filter];
-    } else {
-      filter = [{ $match: { userId: userID } }, ...filter];
+    if (parentId === 0 || parentId === '0') {
+      pipeline = [{ $skip: page * 20 }, { $limit: 20 }];
     }
-    const aggCursor = await dbClient.db.collection('files').aggregate(filter).toArray();
-    fileList = aggCursor.map((dd) => ({
-      id: dd._id,
-      userId: dd.userId,
-      name: dd.name,
-      type: dd.type,
-      isPublic: dd.isPublic,
-      parentId: dd.parentId,
-    }));
-    return res.status(200).send(fileList);
+    const fileCursor = await dbClient.db.collection('files').aggregate(pipeline);
+    const fileList = [];
+    await fileCursor.forEach((doc) => {
+      const document = { id: doc._id, ...doc };
+      delete document.localPath;
+      delete document._id;
+      fileList.push(document);
+    });
+
+    return res.status(200).json(fileList);
   }
 }
 
