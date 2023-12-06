@@ -73,6 +73,7 @@ class FilesController {
     if (parentId) abstractFile.parentId = ObjectId(parentId);
     abstractFile.localPath = `${FOLDER_PATH}/${fileuuid}`;
     const fl = await dbClient.db.collection('files').insertOne({ ...abstractFile });
+    delete abstractFile.localPath;
     return res.status(201).send({ id: fl.insertedId, ...abstractFile });
   }
 }
