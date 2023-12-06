@@ -28,13 +28,13 @@ class FilesController {
     }
 
     const { name, type, data } = req.body;
-    const parentId = req.body.parentId;
+    const parentId = req.body.parentId === '0' ? 0 : req.body.parentId;
     const isPublic = req.body.isPublic || false;
 
     if (!name) { return res.status(400).send({ error: 'Missing name' }); }
     if (!type || !['folder', 'file', 'image'].includes(type)) { return res.status(400).send({ error: 'Missing type' }); }
     if (!data && type !== 'folder') { return res.status(400).send({ error: 'Missing data' }); }
-    if (parentId && parentId !== '0') {
+    if (parentId) {
       const parent = await dbClient.db.collection('files').findOne({ _id: ObjectId(parentId) });
       if (!parent) {
         return res.status(400).send({ error: 'Parent not found' });
@@ -61,7 +61,7 @@ class FilesController {
       fs.mkdirSync(FOLDER_PATH, { recursive: true });
     }
     const fileuuid = uuidv4();
-    const buffer = Buffer.from(data, 'base64').toString('utf-8');
+    const buffer = Buffer.from(data, 'base64');
 
     await fs.writeFile(`${FOLDER_PATH}/${fileuuid}`, buffer, (error) => {
       if (error) {
