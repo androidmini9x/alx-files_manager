@@ -158,6 +158,74 @@ class FilesController {
     }));
     return res.status(200).send(fileList);
   }
+
+  static async putPublish(req, res) {
+    // Extract & Check the token is valid
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const userID = await redisClient.get(`auth_${token}`);
+    if (!userID) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const fileID = req.params.id;
+    const fileExists = await dbClient.db.collection('files').findOne({
+      userId: ObjectId(userID),
+      _id: ObjectId(fileID),
+    });
+
+    if (!fileExists) return res.status(404).send({ error: 'Not found' });
+
+    await dbClient.db.collection('files').updateOne(
+      { _id: ObjectId(fileID) },
+      { $set: { isPublic: true } },
+    );
+
+    fileExists.id = fileExists._id;
+    fileExists.isPublic = true;
+    delete fileExists._id;
+    delete fileExists.localPath;
+
+    return res.status(200).send({ ...fileExists });
+  }
+
+  static async putUnpublish(req, res) {
+    // Extract & Check the token is valid
+    const token = req.header('X-Token');
+
+    if (!token) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const userID = await redisClient.get(`auth_${token}`);
+    if (!userID) {
+      return res.status(401).send({ error: 'Unauthorized' });
+    }
+
+    const fileID = req.params.id;
+    const fileExists = await dbClient.db.collection('files').findOne({
+      userId: ObjectId(userID),
+      _id: ObjectId(fileID),
+    });
+
+    if (!fileExists) return res.status(404).send({ error: 'Not found' });
+
+    await dbClient.db.collection('files').updateOne(
+      { _id: ObjectId(fileID) },
+      { $set: { isPublic: false } },
+    );
+
+    fileExists.id = fileExists._id;
+    fileExists.isPublic = false;
+    delete fileExists._id;
+    delete fileExists.localPath;
+
+    return res.status(200).send({ ...fileExists });
+  }
 }
 
 export default FilesController;
