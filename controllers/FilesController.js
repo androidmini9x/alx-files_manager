@@ -241,7 +241,7 @@ class FilesController {
     const token = req.header('X-Token');
     const userID = await redisClient.get(`auth_${token}`);
 
-    if (!file.isPublic && userID !== file.userId) {
+    if (!file.isPublic && userID !== file.userId.toString()) {
       return res.status(404).send({ error: 'Not found' });
     }
 
