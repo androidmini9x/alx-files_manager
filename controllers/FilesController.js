@@ -26,7 +26,7 @@ class FilesController {
       _id: ObjectId(userID),
     });
 
-    const allowedFileType = ['folder', 'file', 'image']
+    const allowedFileType = ['folder', 'file', 'image'];
     // Extract data from request
     const {
       name, type, data, parentId,
